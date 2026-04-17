@@ -1,33 +1,67 @@
-# --- IDEs y Editores ---
+
+# 1. ENTORNOS DE DESARROLLO (IDEs)
 .vscode/
+.vs/
 .idea/
 *.user
 *.userosscache
 *.sln.docstates
+*.suo
+*.cache
 
-# --- .NET (Backend) ---
-**/bin/
-**/obj/
-appsettings.Development.json
+# 2. BACKEND (.NET / C#)
+**/[Bb]in/
+**/[Oo]bj/
+# Ignorar configuraciones con credenciales de DB
+[Aa]ppsettings.Development.json
+[Aa]ppsettings.Production.json
 *.usersecrets.json
+# Archivos de publicación
+publish/
+_PublishedWebsites/
 
-# --- Angular (Frontend) ---
+
+# 3. FRONTEND (Angular)
 **/node_modules/
 **/dist/
 **/tmp/
 **/out-tsc/
 **/.angular/cache/
+.npm/
 npm-debug.log*
 yarn-error.log*
+.editorconfig
 
-# --- Python / FastAPI (IA Service) ---
+
+# 4. SERVICIOS IA (Python / FastAPI)
 **/__pycache__/
 **/.venv/
 **/env/
+**/venv/
+ENV/
 *.py[cod]
+*.so
+.python-version
+**/modelos/
+*.bin
+*.pt
+*.onnx
+*.weights
+*.h5
+*.joblib
+*.model
 
-# --- Misceláneo y Sistema ---
+# 5. BASE DE DATOS Y LOGS
+*.log
+*.sql.gz
+*.bak
+**/logs/
+# Si guardas imágenes de comprobantes localmente
+**/uploads/
+**/temp_receipts/
+
+
+# 6. SISTEMA OPERATIVO
 .DS_Store
 Thumbs.db
-/coverage
-/typings
+desktop.ini
