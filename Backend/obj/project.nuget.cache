@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "QLmYvEZb1yo=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\LENOVO\\OneDrive\\Documentos\\GestionMatriculas\\Backend\\Backend.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\LENOVO\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.0\\microsoft.aspnetcore.openapi.10.0.0.nupkg.sha512",
+    "C:\\Users\\LENOVO\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
