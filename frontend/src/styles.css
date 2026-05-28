@@ -1,0 +1,30 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --line: #d8dee9;
+  --text: #172033;
+  --muted: #657085;
+  --primary: #1d6f8f;
+  --primary-strong: #134e65;
+  --success: #1f8a5b;
+  --warning: #a76500;
+  --danger: #ba2f3b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}

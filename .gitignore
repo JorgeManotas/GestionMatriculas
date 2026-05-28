@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+backend/.env
+frontend/.env
+
+# FastAPI/local files
+*.log
+*.sqlite3
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+.npm/
+coverage/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

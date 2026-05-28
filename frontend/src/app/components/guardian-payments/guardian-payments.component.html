@@ -1,0 +1,78 @@
+<section class="payments-panel">
+  <div class="toolbar">
+    <div>
+      <h2>Estado de pagos del acudiente</h2>
+      <p>Consulta mensualidades por estudiante, periodo y saldo.</p>
+    </div>
+
+    <form class="search-form" (ngSubmit)="loadPayments()">
+      <label for="guardianId">Acudiente</label>
+      <div class="search-row">
+        <input
+          id="guardianId"
+          name="guardianId"
+          [(ngModel)]="guardianId"
+          placeholder="UUID del acudiente"
+          autocomplete="off"
+        />
+        <button type="submit" [disabled]="loading">
+          {{ loading ? 'Cargando' : 'Consultar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert">
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="summary">
+    <div class="summary-grid">
+      <article class="metric">
+        <span>Acudiente</span>
+        <strong>{{ summary.guardian_name }}</strong>
+      </article>
+      <article class="metric">
+        <span>Pendiente</span>
+        <strong>{{ asNumber(summary.total_pending) | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong>
+      </article>
+      <article class="metric danger">
+        <span>Vencido</span>
+        <strong>{{ asNumber(summary.total_overdue) | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong>
+      </article>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Estudiante</th>
+            <th>Curso</th>
+            <th>Periodo</th>
+            <th>Vence</th>
+            <th>Estado</th>
+            <th class="numeric">Valor</th>
+            <th class="numeric">Pagado</th>
+            <th class="numeric">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let fee of summary.fees">
+            <td>{{ fee.student_name }}</td>
+            <td>{{ fee.course_name }}</td>
+            <td>{{ fee.period }}</td>
+            <td>{{ fee.due_date | date:'dd/MM/yyyy' }}</td>
+            <td>
+              <span class="status" [class.paid]="fee.status === 'PAID'" [class.overdue]="fee.status === 'OVERDUE'">
+                {{ statusLabel(fee.status) }}
+              </span>
+            </td>
+            <td class="numeric">{{ asNumber(fee.amount) | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</td>
+            <td class="numeric">{{ asNumber(fee.paid_amount) | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</td>
+            <td class="numeric strong">{{ asNumber(fee.balance) | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</section>
