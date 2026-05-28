@@ -1,0 +1,9 @@
+:host {
+  display: block;
+}
+
+@media (max-width: 720px) {
+  table {
+    min-width: 760px;
+  }
+}

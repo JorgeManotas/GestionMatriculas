@@ -1,0 +1,96 @@
+<main class="min-h-screen bg-ink-50 text-ink-900">
+  <section class="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
+    <div class="hidden bg-brand-700 px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between">
+      <div class="flex items-center gap-3">
+        <div class="grid h-11 w-11 place-items-center rounded-xl bg-white/12 text-lg font-black">CS</div>
+        <div>
+          <p class="text-sm font-semibold text-white/72">Colegio Sol</p>
+          <h1 class="text-xl font-bold">Gestion escolar financiera</h1>
+        </div>
+      </div>
+
+      <div class="max-w-xl">
+        <p class="mb-5 text-sm font-semibold uppercase tracking-normal text-white/60">Portal privado</p>
+        <h2 class="text-5xl font-black leading-tight">Datos claros para decisiones rapidas.</h2>
+        <p class="mt-5 max-w-lg text-lg leading-8 text-white/76">
+          Consulta saldos, vencimientos y matriculas desde un panel seguro para familias y administracion.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 text-sm text-white/80">
+        <div class="rounded-lg border border-white/12 bg-white/8 p-4">
+          <strong class="block text-2xl text-white">98%</strong>
+          recaudo visible
+        </div>
+        <div class="rounded-lg border border-white/12 bg-white/8 p-4">
+          <strong class="block text-2xl text-white">24/7</strong>
+          consultas
+        </div>
+        <div class="rounded-lg border border-white/12 bg-white/8 p-4">
+          <strong class="block text-2xl text-white">JSONB</strong>
+          roles flexibles
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-center px-5 py-10">
+      <form class="w-full max-w-md rounded-lg border border-ink-200 bg-white p-7 shadow-shell" [formGroup]="loginForm" (ngSubmit)="submit()">
+        <div class="mb-8">
+          <p class="mb-2 text-sm font-bold uppercase tracking-normal text-brand-600">Acceso seguro</p>
+          <h2 class="text-3xl font-black text-ink-900">Iniciar sesion</h2>
+          <p class="mt-2 text-sm leading-6 text-ink-500">Usa una cuenta de prueba del Colegio Sol para entrar al panel.</p>
+        </div>
+
+        <div class="space-y-5">
+          <label class="block">
+            <span class="mb-2 block text-sm font-bold text-ink-700">Correo institucional</span>
+            <input
+              class="w-full rounded-lg border border-ink-200 px-4 py-3 text-sm outline-none transition focus:border-brand-500"
+              type="email"
+              formControlName="email"
+              autocomplete="email"
+            />
+            <span *ngIf="fieldHasError('email')" class="mt-2 block text-sm font-semibold text-danger-500">
+              Ingresa un correo valido.
+            </span>
+          </label>
+
+          <label class="block">
+            <span class="mb-2 block text-sm font-bold text-ink-700">Contrasena</span>
+            <input
+              class="w-full rounded-lg border border-ink-200 px-4 py-3 text-sm outline-none transition focus:border-brand-500"
+              type="password"
+              formControlName="password"
+              autocomplete="current-password"
+            />
+            <span *ngIf="fieldHasError('password')" class="mt-2 block text-sm font-semibold text-danger-500">
+              La contrasena debe tener minimo 8 caracteres.
+            </span>
+          </label>
+        </div>
+
+        <div *ngIf="errorMessage" class="mt-5 rounded-lg border border-danger-500/20 bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-700">
+          {{ errorMessage }}
+        </div>
+
+        <button
+          class="mt-7 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-3 text-sm font-black text-white transition hover:bg-brand-700 disabled:cursor-wait disabled:opacity-70"
+          type="submit"
+          [disabled]="loading"
+        >
+          <span *ngIf="loading" class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>
+          {{ loading ? 'Validando acceso' : 'Entrar al sistema' }}
+        </button>
+
+        <div class="mt-6 rounded-lg bg-ink-50 p-4 text-xs leading-5 text-ink-500">
+          <strong class="block text-ink-700">Puedes ingresar con cualquier usuario existente en la BD:</strong>
+          Acudiente: carlos.torres&#64;colegiosol.edu.co<br />
+          Admin: admin&#64;colegiosol.edu.co<br />
+          Docente: andres.salazar&#64;colegiosol.edu.co<br />
+          Estudiante: sofia.torres&#64;colegiosol.edu.co<br />
+          Clave: User12345*
+        </div>
+      </form>
+    </div>
+  </section>
+</main>

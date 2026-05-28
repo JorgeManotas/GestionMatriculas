@@ -46,6 +46,28 @@ class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AuthLogin(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=80)
+
+
+class AuthUserRead(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    email: EmailStr
+    role: str
+    roles: list[str]
+    avatar_initials: str
+    role_attributes: dict[str, Any]
+    document_number: str | None = None
+
+
+class BulkUploadResult(BaseModel):
+    created: int
+    skipped: int
+    errors: list[str]
+
+
 class CourseRead(BaseModel):
     id: int
     name: str
@@ -110,6 +132,9 @@ class GuardianFeeRead(BaseModel):
     status: str
     paid_amount: Decimal
     balance: Decimal
+    grade: str
+    monthly_fee_amount: Decimal
+    enrollment_fee_amount: Decimal
 
 
 class GuardianPaymentSummary(BaseModel):
@@ -118,3 +143,21 @@ class GuardianPaymentSummary(BaseModel):
     total_pending: Decimal
     total_overdue: Decimal
     fees: list[GuardianFeeRead]
+
+
+class PaymentReportRead(BaseModel):
+    id: uuid.UUID
+    student_id: uuid.UUID
+    student_name: str
+    student_document: str | None
+    amount: Decimal
+    installments: int
+    receipt_url: str
+    status: str
+    created_at: datetime
+    reviewed_by: uuid.UUID | None
+
+
+class PaymentReportVerify(BaseModel):
+    status: str = Field(pattern="^(approved|rejected)$")
+    reviewed_by: uuid.UUID

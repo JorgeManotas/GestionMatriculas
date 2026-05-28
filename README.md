@@ -89,22 +89,22 @@ pip install -r requirements.txt
 
 5. Ejecuta el SQL de `database/schema.sql` en Neon.
 
-6. Levanta la API:
+6. Levanta la API. En Windows es recomendable ejecutar Uvicorn desde el Python del entorno virtual para evitar usar dependencias globales:
 
-```bash
-uvicorn app.main:app --reload
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8010
 ```
 
 La API quedara en:
 
 ```text
-http://127.0.0.1:8000
+http://127.0.0.1:8010
 ```
 
 Documentacion interactiva:
 
 ```text
-http://127.0.0.1:8000/docs
+http://127.0.0.1:8010/docs
 ```
 
 ## Frontend

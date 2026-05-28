@@ -1,0 +1,116 @@
+<section class="space-y-6">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="text-sm font-black uppercase tracking-normal text-brand-600">Estudiantes</p>
+      <h2 class="mt-2 text-3xl font-black text-ink-900">{{ isGuardian ? 'Hijos matriculados' : 'Gestion de usuarios' }}</h2>
+      <p class="mt-2 text-sm text-ink-500">
+        {{ isGuardian ? 'Consulta datos academicos, valores y reporta pagos de Nequi.' : 'Importa usuarios institucionales desde una plantilla Excel validada.' }}
+      </p>
+    </div>
+  </div>
+
+  <div *ngIf="successMessage" class="rounded-lg border border-money-500/20 bg-money-50 p-4 text-sm font-bold text-money-700">{{ successMessage }}</div>
+  <div *ngIf="errorMessage" class="rounded-lg border border-danger-500/20 bg-danger-50 p-4 text-sm font-bold text-danger-700">{{ errorMessage }}</div>
+
+  <div *ngIf="isGuardian" class="grid gap-4 lg:grid-cols-2">
+    <article *ngFor="let student of students" class="rounded-lg border border-ink-200 bg-white p-5 shadow-shell">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-bold text-ink-500">Grado {{ student.grade }} - {{ student.course }}</p>
+          <h3 class="mt-1 text-xl font-black text-ink-900">{{ student.name }}</h3>
+        </div>
+        <span
+          class="rounded-full px-3 py-1 text-xs font-black"
+          [class.bg-money-50]="student.financialStatus === 'PAID'"
+          [class.text-money-700]="student.financialStatus === 'PAID'"
+          [class.bg-risk-50]="student.financialStatus === 'PENDING'"
+          [class.text-risk-700]="student.financialStatus === 'PENDING'"
+          [class.bg-danger-50]="student.financialStatus === 'OVERDUE'"
+          [class.text-danger-700]="student.financialStatus === 'OVERDUE'"
+        >
+          {{ statusLabel(student.financialStatus) }}
+        </span>
+      </div>
+
+      <div class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div class="rounded-lg bg-ink-50 p-3">
+          <span class="text-xs font-bold text-ink-500">Matricula</span>
+          <strong class="mt-1 block text-sm font-black text-ink-900">{{ student.enrollmentFee | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong>
+        </div>
+        <div class="rounded-lg bg-ink-50 p-3">
+          <span class="text-xs font-bold text-ink-500">Mensualidad</span>
+          <strong class="mt-1 block text-sm font-black text-ink-900">{{ student.monthlyFee | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong>
+        </div>
+        <div class="rounded-lg bg-ink-50 p-3">
+          <span class="text-xs font-bold text-ink-500">Saldo</span>
+          <strong class="mt-1 block text-sm font-black text-danger-700">{{ student.balance | currency:'COP':'symbol-narrow':'1.0-0':'es-CO' }}</strong>
+        </div>
+        <div class="rounded-lg bg-ink-50 p-3">
+          <span class="text-xs font-bold text-ink-500">Cuotas</span>
+          <strong class="mt-1 block text-sm font-black text-ink-900">{{ student.periods.length }}</strong>
+        </div>
+      </div>
+
+      <button class="mt-5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-brand-700" type="button" (click)="openReport(student)">
+        Reportar Pago
+      </button>
+    </article>
+  </div>
+
+  <section *ngIf="canImportUsers" class="rounded-lg border border-ink-200 bg-white p-6 shadow-shell">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h3 class="text-xl font-black text-ink-900">Importar desde Excel</h3>
+        <p class="mt-1 text-sm text-ink-500">Columnas obligatorias: first_name, last_name, email, document_number, role.</p>
+      </div>
+      <a class="rounded-lg border border-brand-100 bg-brand-50 px-4 py-2.5 text-sm font-black text-brand-700" [href]="templateUrl">
+        Descargar plantilla
+      </a>
+    </div>
+
+    <label class="mt-5 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-ink-200 bg-ink-50 px-6 py-10 text-center transition hover:border-brand-500">
+      <span class="text-sm font-black text-ink-900">Seleccionar archivo .xlsx</span>
+      <span class="mt-1 text-sm text-ink-500">Los usuarios se crean con contrasena inicial User12345*</span>
+      <input class="hidden" type="file" accept=".xlsx" (change)="onBulkFileSelected($event)" />
+    </label>
+
+    <div *ngIf="bulkResult" class="mt-5 rounded-lg bg-ink-50 p-4 text-sm text-ink-700">
+      <strong class="font-black">{{ bulkResult.created }} creados</strong>, {{ bulkResult.skipped }} omitidos.
+      <ul *ngIf="bulkResult.errors.length" class="mt-3 list-disc space-y-1 pl-5">
+        <li *ngFor="let error of bulkResult.errors">{{ error }}</li>
+      </ul>
+    </div>
+  </section>
+
+  <div *ngIf="selectedStudent" class="fixed inset-0 z-50 grid place-items-center bg-ink-900/35 p-4">
+    <form class="w-full max-w-lg rounded-lg bg-white p-6 shadow-shell" [formGroup]="reportForm" (ngSubmit)="submitReport()">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-black uppercase tracking-normal text-brand-600">Reportar pago Nequi</p>
+          <h3 class="mt-1 text-2xl font-black text-ink-900">{{ selectedStudent.name }}</h3>
+        </div>
+        <button class="rounded-lg border border-ink-200 px-3 py-2 text-sm font-black text-ink-500" type="button" (click)="closeReport()">Cerrar</button>
+      </div>
+
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <label>
+          <span class="mb-2 block text-sm font-bold text-ink-700">Cuotas / meses</span>
+          <input class="w-full rounded-lg border border-ink-200 px-4 py-3 text-sm" type="number" min="1" formControlName="installments" />
+        </label>
+        <label>
+          <span class="mb-2 block text-sm font-bold text-ink-700">Monto reportado</span>
+          <input class="w-full rounded-lg border border-ink-200 px-4 py-3 text-sm" type="number" min="1" formControlName="amount" />
+        </label>
+      </div>
+
+      <label class="mt-4 block">
+        <span class="mb-2 block text-sm font-bold text-ink-700">Comprobante PDF/JPG/PNG</span>
+        <input class="w-full rounded-lg border border-ink-200 px-4 py-3 text-sm" type="file" accept=".pdf,.jpg,.jpeg,.png" (change)="onReceiptSelected($event)" />
+      </label>
+
+      <button class="mt-6 w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-black text-white disabled:opacity-70" type="submit" [disabled]="loading">
+        {{ loading ? 'Enviando reporte' : 'Enviar a auditoria' }}
+      </button>
+    </form>
+  </div>
+</section>

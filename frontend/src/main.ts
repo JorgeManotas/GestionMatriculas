@@ -1,16 +1,7 @@
-import { bootstrapApplication } from '@angular/platform-browser';
-import { LOCALE_ID } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
-import { registerLocaleData } from '@angular/common';
-import localeEsCo from '@angular/common/locales/es-CO';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 
-import { AppComponent } from './app/app.component';
+import { AppModule } from './app/app.module';
 
-registerLocaleData(localeEsCo);
-
-bootstrapApplication(AppComponent, {
-  providers: [
-    provideHttpClient(),
-    { provide: LOCALE_ID, useValue: 'es-CO' }
-  ]
-}).catch((error) => console.error(error));
+platformBrowserDynamic()
+  .bootstrapModule(AppModule)
+  .catch((error) => console.error(error));

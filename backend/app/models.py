@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -55,6 +55,7 @@ class Course(Base):
     grade: Mapped[str] = mapped_column(String(40), nullable=False)
     academic_year: Mapped[int] = mapped_column(Integer, nullable=False)
     monthly_fee_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    enrollment_fee_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0"))
 
     enrollments: Mapped[list["Enrollment"]] = relationship("Enrollment", back_populates="course")
 
@@ -108,3 +109,23 @@ class Payment(Base):
 
     monthly_fee: Mapped[MonthlyFee] = relationship("MonthlyFee", back_populates="payments")
     paid_by: Mapped[User] = relationship("User")
+
+
+class PaymentReport(Base):
+    __tablename__ = "payment_reports"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    student_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    installments: Mapped[int] = mapped_column(Integer, nullable=False)
+    receipt_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    status: Mapped[str] = mapped_column(
+        Enum("pending", "approved", "rejected", name="payment_report_status"),
+        default="pending",
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+
+    student: Mapped[User] = relationship("User", foreign_keys=[student_id])
+    reviewer: Mapped[User | None] = relationship("User", foreign_keys=[reviewed_by])

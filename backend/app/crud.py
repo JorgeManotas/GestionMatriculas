@@ -9,6 +9,10 @@ from sqlalchemy.orm import Session, joinedload
 from app import models, schemas
 
 
+DEFAULT_INITIAL_PASSWORD = "User12345*"
+REQUIRED_BULK_COLUMNS = {"first_name", "last_name", "email", "document_number", "role"}
+
+
 def list_roles(db: Session) -> list[models.Role]:
     return list(db.scalars(select(models.Role).order_by(models.Role.name)).all())
 
@@ -23,6 +27,36 @@ def get_user_or_404(db: Session, user_id: uuid.UUID) -> models.User:
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
     return user
+
+
+def authenticate_user(db: Session, payload: schemas.AuthLogin) -> schemas.AuthUserRead:
+    stmt = select(models.User).options(joinedload(models.User.roles)).where(models.User.email == str(payload.email).lower())
+    user = db.scalars(stmt).unique().one_or_none()
+
+    if not user or not user.is_active or user.password_hash != payload.password:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales invalidas.")
+
+    role_names = [role.name for role in user.roles]
+    primary_role = _resolve_primary_role(role_names)
+    return schemas.AuthUserRead(
+        id=user.id,
+        full_name=f"{user.first_name} {user.last_name}",
+        email=user.email,
+        role=primary_role,
+        roles=role_names,
+        avatar_initials=f"{user.first_name[:1]}{user.last_name[:1]}".upper(),
+        role_attributes=user.role_attributes,
+        document_number=user.document_number,
+    )
+
+
+def _resolve_primary_role(role_names: list[str]) -> str:
+    priority = ["ADMIN", "RECTOR", "SECRETARY", "TEACHER", "GUARDIAN", "STUDENT"]
+    normalized = {role.upper() for role in role_names}
+    for role in priority:
+        if role in normalized:
+            return role
+    return role_names[0].upper() if role_names else "STUDENT"
 
 
 def create_user(db: Session, payload: schemas.UserCreate) -> models.User:
@@ -59,6 +93,70 @@ def create_user(db: Session, payload: schemas.UserCreate) -> models.User:
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(status_code=500, detail="No fue posible crear el usuario.") from exc
+
+
+def bulk_create_users(db: Session, rows: list[dict[str, str]]) -> schemas.BulkUploadResult:
+    errors: list[str] = []
+    created = 0
+    skipped = 0
+
+    for index, row in enumerate(rows, start=2):
+        missing = [column for column in REQUIRED_BULK_COLUMNS if not str(row.get(column, "")).strip()]
+        if missing:
+            errors.append(f"Fila {index}: faltan columnas obligatorias: {', '.join(missing)}.")
+            skipped += 1
+            continue
+
+        role_name = str(row["role"]).strip().upper()
+        role = db.scalar(select(models.Role).where(models.Role.name == role_name))
+        if not role:
+            errors.append(f"Fila {index}: rol inexistente '{role_name}'.")
+            skipped += 1
+            continue
+
+        email = str(row["email"]).strip().lower()
+        exists = db.scalar(select(models.User.id).where(models.User.email == email))
+        if exists:
+            errors.append(f"Fila {index}: el correo {email} ya existe.")
+            skipped += 1
+            continue
+
+        user = models.User(
+            first_name=str(row["first_name"]).strip(),
+            last_name=str(row["last_name"]).strip(),
+            email=email,
+            document_number=str(row.get("document_number", "")).strip() or None,
+            password_hash=DEFAULT_INITIAL_PASSWORD,
+            role_attributes=_build_role_attributes_from_bulk_row(row, role_name),
+            roles=[role],
+        )
+        db.add(user)
+        created += 1
+
+    try:
+        db.commit()
+        return schemas.BulkUploadResult(created=created, skipped=skipped, errors=errors)
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="El archivo contiene documentos o correos duplicados.") from exc
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="No fue posible procesar la carga masiva.") from exc
+
+
+def _build_role_attributes_from_bulk_row(row: dict[str, str], role_name: str) -> dict:
+    if role_name == "TEACHER":
+        course = str(row.get("curso", "")).strip()
+        subject = str(row.get("materia", "")).strip()
+        return {"docente": {"materias": [{"curso": course, "nombre": subject}] if course and subject else []}}
+    if role_name == "STUDENT":
+        return {
+            "estudiante": {
+                "documento_identidad": str(row.get("document_number", "")).strip(),
+                "acudiente_id": str(row.get("acudiente_id", "")).strip(),
+            }
+        }
+    return {}
 
 
 def create_enrollment(db: Session, payload: schemas.EnrollmentCreate) -> models.Enrollment:
@@ -156,6 +254,9 @@ def get_guardian_payment_summary(db: Session, guardian_id: uuid.UUID) -> schemas
                 status=monthly_fee.status,
                 paid_amount=paid,
                 balance=balance,
+                grade=course.grade,
+                monthly_fee_amount=course.monthly_fee_amount,
+                enrollment_fee_amount=course.enrollment_fee_amount,
             )
         )
 
@@ -199,3 +300,99 @@ def create_payment(db: Session, payload: schemas.PaymentCreate) -> models.Paymen
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(status_code=500, detail="No fue posible registrar el pago.") from exc
+
+
+def create_payment_report(
+    db: Session,
+    student_id: uuid.UUID,
+    amount: Decimal,
+    installments: int,
+    receipt_url: str,
+) -> models.PaymentReport:
+    student = get_user_or_404(db, student_id)
+    if "STUDENT" not in {role.name for role in student.roles}:
+        raise HTTPException(status_code=400, detail="El usuario seleccionado no es estudiante.")
+    if installments <= 0:
+        raise HTTPException(status_code=400, detail="El numero de cuotas debe ser mayor a cero.")
+
+    report = models.PaymentReport(
+        student_id=student_id,
+        amount=amount,
+        installments=installments,
+        receipt_url=receipt_url,
+        status="pending",
+    )
+
+    try:
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        return report
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="No fue posible reportar el pago.") from exc
+
+
+def list_payment_reports(db: Session, status_filter: str = "pending") -> list[schemas.PaymentReportRead]:
+    stmt = (
+        select(models.PaymentReport, models.User)
+        .join(models.User, models.PaymentReport.student_id == models.User.id)
+        .where(models.PaymentReport.status == status_filter)
+        .order_by(models.PaymentReport.created_at.desc())
+    )
+
+    return [
+        schemas.PaymentReportRead(
+            id=report.id,
+            student_id=student.id,
+            student_name=f"{student.first_name} {student.last_name}",
+            student_document=_student_document(student),
+            amount=report.amount,
+            installments=report.installments,
+            receipt_url=report.receipt_url,
+            status=report.status,
+            created_at=report.created_at,
+            reviewed_by=report.reviewed_by,
+        )
+        for report, student in db.execute(stmt).all()
+    ]
+
+
+def verify_payment_report(db: Session, report_id: uuid.UUID, payload: schemas.PaymentReportVerify) -> schemas.PaymentReportRead:
+    report = db.get(models.PaymentReport, report_id)
+    reviewer = get_user_or_404(db, payload.reviewed_by)
+    reviewer_roles = {role.name for role in reviewer.roles}
+
+    if not report:
+        raise HTTPException(status_code=404, detail="Reporte de pago no encontrado.")
+    if not reviewer_roles.intersection({"ADMIN", "RECTOR", "SECRETARY"}):
+        raise HTTPException(status_code=403, detail="El usuario no tiene permisos para verificar pagos.")
+
+    report.status = payload.status
+    report.reviewed_by = payload.reviewed_by
+
+    try:
+        db.commit()
+        db.refresh(report)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="No fue posible verificar el pago.") from exc
+
+    student = get_user_or_404(db, report.student_id)
+    return schemas.PaymentReportRead(
+        id=report.id,
+        student_id=student.id,
+        student_name=f"{student.first_name} {student.last_name}",
+        student_document=_student_document(student),
+        amount=report.amount,
+        installments=report.installments,
+        receipt_url=report.receipt_url,
+        status=report.status,
+        created_at=report.created_at,
+        reviewed_by=report.reviewed_by,
+    )
+
+
+def _student_document(student: models.User) -> str | None:
+    attributes = student.role_attributes or {}
+    return attributes.get("estudiante", {}).get("documento_identidad") or student.document_number

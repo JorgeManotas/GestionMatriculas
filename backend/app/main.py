@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
 from app.database import SessionLocal
-from app.routers import enrollments, payments, roles, users
+from app.routers import auth, enrollments, payments, roles, users
 
 
 settings = get_settings()
@@ -25,9 +26,11 @@ app.add_middleware(
 )
 
 app.include_router(roles.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(enrollments.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
+app.mount("/uploads", StaticFiles(directory="uploads", check_dir=False), name="uploads")
 
 
 @app.get("/health")
